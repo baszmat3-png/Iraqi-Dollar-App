@@ -9,15 +9,21 @@ android {
         applicationId "com.app.wrapper"
         minSdk 24
         targetSdk 34
-        versionCode 1
+        versionCode (System.getenv("RUN_NUMBER") ?: "1").toInteger()
         versionName "1.0"
         buildConfigField "String", "APP_URL", "\"${appUrl}\""
     }
     buildFeatures { buildConfig true }
+    signingConfigs {
+        stable {
+            def ks = System.getenv("KS_PATH")
+            if (ks) { storeFile file(ks); storePassword "apkstore123"; keyAlias "app"; keyPassword "apkstore123" }
+        }
+    }
     buildTypes {
         release {
             // موقّع بمفتاح debug ليُثبَّت مباشرة
-            signingConfig signingConfigs.debug
+            signingConfig System.getenv("KS_PATH") ? signingConfigs.stable : signingConfigs.debug
             minifyEnabled false
         }
     }

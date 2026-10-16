@@ -14,9 +14,20 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: 8.9 }
+      - name: Restore signing key
+        id: ks
+        uses: actions/cache@v4
+        with:
+          path: release.keystore
+          key: apk-signing-key-v1
+      - name: Create signing key if missing
+        run: |
+          [ -f release.keystore ] || keytool -genkeypair -keystore release.keystore -storepass apkstore123 -keypass apkstore123 -alias app -keyalg RSA -keysize 2048 -validity 36500 -dname "CN=App"
       - name: Build
         env:
           APP_URL: ${{ vars.APP_URL }}
+          KS_PATH: ${{ github.workspace }}/release.keystore
+          RUN_NUMBER: ${{ github.run_number }}
         run: gradle :app:assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
