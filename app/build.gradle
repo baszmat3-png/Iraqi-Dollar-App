@@ -1,0 +1,23 @@
+plugins { id 'com.android.application' }
+def appUrl = System.getenv("APP_URL") ?: "https://iraqi-dollar-drjx.onrender.com"
+android {
+    namespace 'com.app.wrapper'
+    compileSdk 34
+    defaultConfig {
+        applicationId "com.app.wrapper"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        buildConfigField "String", "APP_URL", "\"${appUrl}\""
+    }
+    buildFeatures { buildConfig true }
+    buildTypes {
+        release {
+            // موقّع بمفتاح debug ليُثبَّت مباشرة
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
