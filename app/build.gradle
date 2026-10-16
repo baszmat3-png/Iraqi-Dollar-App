@@ -13,6 +13,11 @@ android {
         versionName "1.0"
         buildConfigField "String", "APP_URL", "\"${appUrl}\""
     }
+    flavorDimensions "v"
+    productFlavors {
+        user { dimension "v"; manifestPlaceholders = [appLabel: "التطبيق"]; buildConfigField "String", "START", "\"index.html\"" }
+        admin { dimension "v"; applicationId "com.app.wrapper.admin"; manifestPlaceholders = [appLabel: "لوحة التحكم"]; buildConfigField "String", "START", "\"admin.html\"" }
+    }
     buildFeatures { buildConfig true }
     signingConfigs {
         stable {

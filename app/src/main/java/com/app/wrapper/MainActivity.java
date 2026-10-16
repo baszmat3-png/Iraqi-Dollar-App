@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
         });
         web.setDownloadListener((url, ua, cd, mime, len) ->
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
-        web.loadUrl("https://" + HOST + "/index.html");
+        web.loadUrl("https://" + HOST + "/" + BuildConfig.START);
     }
 
     @Override protected void onActivityResult(int req, int res, Intent data) {
