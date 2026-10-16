@@ -25,6 +25,35 @@ public class MainActivity extends Activity {
     class Bridge {
         @JavascriptInterface public String server() { return BuildConfig.APP_URL; }
 
+        @JavascriptInterface public void sseStart(String id, String url) {
+            new Thread(() -> {
+                try {
+                    if (!url.startsWith(BuildConfig.APP_URL)) throw new IOException("blocked");
+                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setConnectTimeout(20000); c.setReadTimeout(0);
+                    c.setRequestProperty("Accept", "text/event-stream");
+                    c.setRequestProperty("Cache-Control", "no-cache");
+                    streams.put(id, c);
+                    if (c.getResponseCode() != 200) throw new IOException("status");
+                    BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
+                    String line, ev = "message"; StringBuilder data = new StringBuilder();
+                    while ((line = br.readLine()) != null) {
+                        if (line.isEmpty()) {
+                            if (data.length() > 0) emit(id, ev, data.toString());
+                            ev = "message"; data.setLength(0);
+                        } else if (line.startsWith("event:")) ev = line.substring(6).trim();
+                        else if (line.startsWith("data:")) { if (data.length() > 0) data.append('\n'); data.append(line.substring(5).replaceFirst("^ ", "")); }
+                    }
+                } catch (Exception e) { }
+                if (streams.remove(id) != null) emit(id, "error", "");
+            }).start();
+        }
+
+        @JavascriptInterface public void sseClose(String id) {
+            HttpURLConnection c = streams.remove(id);
+            if (c != null) new Thread(c::disconnect).start();
+        }
+
         @JavascriptInterface public void request(String id, String method, String url, String headers, String bodyB64) {
             pool.execute(() -> {
                 int status = -1; String hb = "", bb = "";
@@ -63,6 +92,51 @@ public class MainActivity extends Activity {
         }
     }
 
+    private final LinkedHashMap<String, Object[]> imgCache = new LinkedHashMap<>(64, 0.75f, true);
+    private int imgCacheBytes = 0;
+
+    private WebResourceResponse proxyGet(String url) {
+        boolean cacheable = url.contains("avatar") && url.contains("v=");
+        if (cacheable) synchronized (imgCache) {
+            Object[] hit = imgCache.get(url);
+            if (hit != null) return new WebResourceResponse((String) hit[0], null, new ByteArrayInputStream((byte[]) hit[1]));
+        }
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+            c.setConnectTimeout(20000); c.setReadTimeout(30000);
+            int code = c.getResponseCode();
+            InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+            String ct = c.getContentType();
+            String mime = ct == null ? "application/octet-stream" : ct.split(";")[0].trim();
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            if (in != null) { byte[] buf = new byte[16384]; int n; while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); in.close(); }
+            byte[] data = bo.toByteArray();
+            if (cacheable && code == 200) synchronized (imgCache) {
+                imgCache.put(url, new Object[]{mime, data});
+                imgCacheBytes += data.length;
+                Iterator<Map.Entry<String, Object[]>> it = imgCache.entrySet().iterator();
+                while (imgCacheBytes > 24_000_000 && it.hasNext()) { imgCacheBytes -= ((byte[]) it.next().getValue()[1]).length; it.remove(); }
+            }
+            WebResourceResponse r = new WebResourceResponse(mime, "UTF-8", new ByteArrayInputStream(data));
+            r.setStatusCodeAndReasonPhrase(code, code >= 400 ? "Error" : "OK");
+            Map<String, String> h = new HashMap<>();
+            h.put("Access-Control-Allow-Origin", "*");
+            r.setResponseHeaders(h);
+            return r;
+        } catch (Exception e) {
+            WebResourceResponse r = new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
+            r.setStatusCodeAndReasonPhrase(504, "Gateway Timeout");
+            return r;
+        }
+    }
+
+    private final Map<String, HttpURLConnection> streams = new ConcurrentHashMap<>();
+
+    private void emit(String id, String ev, String data) {
+        final String js = "window.__nbSse&&window.__nbSse(" + JSONObject.quote(id) + "," + JSONObject.quote(ev) + "," + JSONObject.quote(data) + ")";
+        web.post(() -> web.evaluateJavascript(js, null));
+    }
+
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         web = new WebView(this);
@@ -83,7 +157,13 @@ public class MainActivity extends Activity {
 
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
-                return loader.shouldInterceptRequest(r.getUrl());
+                Uri u = r.getUrl();
+                String path = u.getPath() == null ? "" : u.getPath();
+                if (HOST.equals(u.getHost()) && "GET".equals(r.getMethod())
+                        && (path.startsWith("/api/") || path.equals("/config.json"))) {
+                    return proxyGet(BuildConfig.APP_URL + path + (u.getEncodedQuery() == null ? "" : "?" + u.getEncodedQuery()));
+                }
+                return loader.shouldInterceptRequest(u);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 Uri u = r.getUrl();

@@ -4,7 +4,6 @@
   window.__nbReady = 1;
   var S = window.__SERVER = Native.server();
   var pend = {}, n = 0, of = window.fetch;
-  try { delete window.EventSource; window.EventSource = undefined; } catch (e) {} // يعتمد التطبيق على الفحص كل 5 ثوانٍ
   function target(u) {
     try {
       var a = new URL(u, location.href);
@@ -20,6 +19,23 @@
     var h = {}; try { h = JSON.parse(new TextDecoder().decode(unb64(hb))); } catch (e) {}
     var nobody = status === 204 || status === 205 || status === 304;
     p.res(new Response(nobody ? null : unb64(bb), { status: status, headers: h }));
+  };
+  var sses = {}, sn = 0;
+  window.__nbSse = function (id, ev, data) {
+    var es = sses[id]; if (!es) return;
+    if (ev === 'error') { delete sses[id]; es.readyState = 2; }
+    var e = { type: ev, data: data }, hs = es.h[ev] || [];
+    hs.slice().forEach(function (f) { try { f(e); } catch (x) {} });
+    var on = es['on' + ev]; if (on) try { on(e); } catch (x) {}
+  };
+  window.EventSource = function (url) {
+    var t = target(url) || url, id = 's' + (++sn), es = this;
+    es.url = url; es.readyState = 1; es.h = {};
+    es.addEventListener = function (ev, f) { (es.h[ev] = es.h[ev] || []).push(f); };
+    es.removeEventListener = function (ev, f) { es.h[ev] = (es.h[ev] || []).filter(function (x) { return x !== f; }); };
+    es.close = function () { es.readyState = 2; delete sses[id]; Native.sseClose(id); };
+    sses[id] = es;
+    Native.sseStart(id, t);
   };
   window.fetch = function (i, init) {
     var req;
