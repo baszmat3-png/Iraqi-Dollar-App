@@ -28,7 +28,15 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           KS_PATH: ${{ github.workspace }}/release.keystore
           RUN_NUMBER: ${{ github.run_number }}
-        run: gradle :app:assembleUserRelease :app:assembleAdminRelease :app:bundleUserRelease --no-daemon
+        run: gradle :app:assembleUserRelease :app:assembleAdminRelease :app:bundleUserRelease 2>&1 | tee build.log; exit ${PIPESTATUS[0]} --no-daemon
+      - name: Publish error log
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete buildlog --yes --cleanup-tag || true
+          grep -nE "error|Error|FAILED|What went wrong|Could not|not found|Caused by" -A3 build.log | head -80 > err.txt || true
+          gh release create buildlog --prerelease --title "Build log" --notes-file err.txt
       - uses: actions/upload-artifact@v4
         with:
           name: app-apk
