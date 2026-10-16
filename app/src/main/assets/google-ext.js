@@ -41,6 +41,11 @@
     if (typeof CFG !== 'undefined' && CFG.maint) return fail('التطبيق قيد الصيانة حالياً، حاول لاحقاً');
     if (!cfg) { say('جارٍ التجهيز… اضغط مرة أخرى بعد لحظة'); prep(); return; }
     if (!cfg.enabled || !cfg.clientId) return fail('الدخول عبر Google غير مفعّل بعد، تواصل مع الإدارة');
+    if (window.Native && Native.googleSignIn) { // داخل التطبيق: دخول Google الأصلي
+      setBusy(true);
+      window.__nbGoogle = (t, err) => { if (t) return finish('idt:' + t); setBusy(false); if (err && err !== 'cancel') fail('تعذر الدخول عبر Google: ' + err); };
+      return Native.googleSignIn(cfg.clientId);
+    }
     if (!(window.google && google.accounts && google.accounts.oauth2)) {
       say('جارٍ الاتصال بـ Google… اضغط مرة أخرى بعد لحظة');
       loadGsi().catch(() => fail('تعذر الاتصال بخدمة Google، تحقق من الإنترنت'));

@@ -8,6 +8,10 @@ import android.os.Message;
 import android.util.Base64;
 import android.webkit.*;
 import androidx.webkit.WebViewAssetLoader;
+import androidx.core.content.ContextCompat;
+import androidx.credentials.*;
+import androidx.credentials.exceptions.*;
+import com.google.android.libraries.identity.googleid.*;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -24,6 +28,30 @@ public class MainActivity extends Activity {
 
     class Bridge {
         @JavascriptInterface public String server() { return BuildConfig.APP_URL; }
+
+        @JavascriptInterface public void googleSignIn(String clientId) {
+            runOnUiThread(() -> {
+                try {
+                    CredentialManager cm = CredentialManager.create(MainActivity.this);
+                    GetCredentialRequest rq = new GetCredentialRequest.Builder()
+                        .addCredentialOption(new GetSignInWithGoogleOption.Builder(clientId).build()).build();
+                    cm.getCredentialAsync(MainActivity.this, rq, null, ContextCompat.getMainExecutor(MainActivity.this),
+                        new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                            @Override public void onResult(GetCredentialResponse r) {
+                                Credential c = r.getCredential();
+                                if (c instanceof CustomCredential && GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(c.getType())) {
+                                    String t = GoogleIdTokenCredential.createFrom(((CustomCredential) c).getData()).getIdToken();
+                                    googleResult(t, "");
+                                } else googleResult("", "unsupported");
+                            }
+                            @Override public void onError(GetCredentialException e) {
+                                googleResult("", e instanceof GetCredentialCancellationException ? "cancel"
+                                    : (e.getType() + " " + (e.getMessage() == null ? "" : e.getMessage())));
+                            }
+                        });
+                } catch (Exception e) { googleResult("", String.valueOf(e.getMessage())); }
+            });
+        }
 
         @JavascriptInterface public void sseStart(String id, String url) {
             new Thread(() -> {
@@ -131,6 +159,10 @@ public class MainActivity extends Activity {
     }
 
     private final Map<String, HttpURLConnection> streams = new ConcurrentHashMap<>();
+
+    private void googleResult(String token, String err) {
+        web.evaluateJavascript("window.__nbGoogle&&window.__nbGoogle(" + JSONObject.quote(token) + "," + JSONObject.quote(err) + ")", null);
+    }
 
     private void emit(String id, String ev, String data) {
         final String js = "window.__nbSse&&window.__nbSse(" + JSONObject.quote(id) + "," + JSONObject.quote(ev) + "," + JSONObject.quote(data) + ")";

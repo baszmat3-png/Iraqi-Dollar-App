@@ -40,4 +40,5 @@ jobs:
           cp app/build/outputs/apk/user/release/*.apk app-release.apk
           cp app/build/outputs/apk/admin/release/*.apk admin-release.apk
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest app-release.apk admin-release.apk --title "Latest APK" --notes "Direct APK download"
+          SHA1=$(keytool -list -v -keystore release.keystore -storepass apkstore123 | grep "SHA1:" | head -1 | sed 's/.*SHA1: *//')
+          gh release create latest app-release.apk admin-release.apk --title "Latest APK" --notes "Package: com.app.wrapper | SHA-1: $SHA1"
