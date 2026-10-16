@@ -1,8 +1,10 @@
 plugins { id 'com.android.application' }
+dependencies { implementation 'androidx.webkit:webkit:1.11.0' }
 def appUrl = System.getenv("APP_URL") ?: "https://iraqi-dollar-drjx.onrender.com"
 android {
     namespace 'com.app.wrapper'
     compileSdk 34
+    
     defaultConfig {
         applicationId "com.app.wrapper"
         minSdk 24
