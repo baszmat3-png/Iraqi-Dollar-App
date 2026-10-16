@@ -8,12 +8,12 @@ dependencies {
 def appUrl = System.getenv("APP_URL") ?: "https://iraqi-dollar-drjx.onrender.com"
 android {
     namespace 'com.app.wrapper'
-    compileSdk 34
+    compileSdk 36
     
     defaultConfig {
         applicationId "com.app.wrapper"
         minSdk 24
-        targetSdk 34
+        targetSdk 36
         versionCode Integer.parseInt(System.getenv("RUN_NUMBER") ?: "1")
         versionName "1.0"
         buildConfigField "String", "APP_URL", "\"${appUrl}\""

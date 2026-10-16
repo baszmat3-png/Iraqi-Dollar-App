@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
-        with: { gradle-version: 8.9 }
+        with: { gradle-version: 8.11.1 }
       - name: Restore signing key
         id: ks
         uses: actions/cache@v4
@@ -28,17 +28,20 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           KS_PATH: ${{ github.workspace }}/release.keystore
           RUN_NUMBER: ${{ github.run_number }}
-        run: gradle :app:assembleUserRelease :app:assembleAdminRelease --no-daemon
+        run: gradle :app:assembleUserRelease :app:assembleAdminRelease :app:bundleUserRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: app-apk
-          path: app/build/outputs/apk/*/release/*.apk
+          path: |
+            app/build/outputs/apk/*/release/*.apk
+            app/build/outputs/bundle/userRelease/*.aab
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/user/release/*.apk app-release.apk
           cp app/build/outputs/apk/admin/release/*.apk admin-release.apk
+          cp app/build/outputs/bundle/userRelease/*.aab app-release.aab
           gh release delete latest --yes --cleanup-tag || true
           SHA1=$(keytool -list -v -keystore release.keystore -storepass apkstore123 | grep "SHA1:" | head -1 | sed 's/.*SHA1: *//')
-          gh release create latest app-release.apk admin-release.apk --title "Latest APK" --notes "Package: com.app.wrapper | SHA-1: $SHA1"
+          gh release create latest app-release.apk admin-release.apk app-release.aab --title "Latest APK" --notes "Package: com.app.wrapper | SHA-1: $SHA1"

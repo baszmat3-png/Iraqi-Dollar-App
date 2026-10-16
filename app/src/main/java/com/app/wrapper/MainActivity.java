@@ -9,6 +9,9 @@ import android.util.Base64;
 import android.webkit.*;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.credentials.*;
 import androidx.credentials.exceptions.*;
 import com.google.android.libraries.identity.googleid.*;
@@ -173,6 +176,12 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         web = new WebView(this);
         setContentView(web);
+        // targetSdk 35+: الواجهة تمتد خلف أشرطة النظام، فنضيف حشوة بمقدارها
+        ViewCompat.setOnApplyWindowInsetsListener(web, (v, wi) -> {
+            Insets i = wi.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime() | WindowInsetsCompat.Type.displayCutout());
+            v.setPadding(i.left, i.top, i.right, i.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
