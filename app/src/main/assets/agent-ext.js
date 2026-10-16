@@ -3,6 +3,8 @@
    2) شراء النقاط بالسعر الرسمي: معاينة المبلغ بالدينار أثناء الكتابة (والإرسال للإدارة في merchant-ext.js) */
 (function () {
   if (typeof S === 'undefined' || typeof AG === 'undefined') return;
+  // تصميم لوحة الوكيل الجديد (معلومات الوكالة + تحويل من الحساب + سجل العمليات اللحظي)
+  try { if (!window.__agpLoad) { window.__agpLoad = 1; const sc = document.createElement('script'); sc.src = '/agent-panel.js?v=1'; document.head.appendChild(sc); } } catch (e) {}
   const css = document.createElement('style');
   css.textContent = `
   #agres{display:grid;gap:8px;margin:2px 0 10px}
