@@ -28,7 +28,7 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           KS_PATH: ${{ github.workspace }}/release.keystore
           RUN_NUMBER: ${{ github.run_number }}
-        run: gradle :app:assembleUserRelease :app:assembleAdminRelease :app:bundleUserRelease 2>&1 | tee build.log; exit ${PIPESTATUS[0]} --no-daemon
+        run: gradle :app:assembleUserRelease :app:assembleAdminRelease :app:bundleUserRelease --no-daemon 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
       - name: Publish error log
         if: failure()
         env:
