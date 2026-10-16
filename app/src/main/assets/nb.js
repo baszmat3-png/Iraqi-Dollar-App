@@ -37,6 +37,26 @@
     sses[id] = es;
     Native.sseStart(id, t);
   };
+
+  /* ---- مزامنة فورية: أي حدث من السيرفر يُحدّث كل الأقسام فوراً ---- */
+  var lastPoke = 0;
+  function pokeAll() {
+    var t = Date.now(); if (t - lastPoke < 800) return; lastPoke = t;
+    try { document.dispatchEvent(new Event('visibilitychange')); } catch (e) {}
+    try { window.dispatchEvent(new Event('focus')); } catch (e) {}
+    try { if (window.__adminTick) window.__adminTick(); } catch (e) {}
+  }
+  window.__pokeAll = pokeAll;
+  var ps = null, pd = 1000;
+  function pokeConnect() {
+    if (ps) { try { ps.close(); } catch (e) {} ps = null; }
+    ps = new EventSource('/api/poke/stream');
+    ps.addEventListener('hello', function () { pd = 1000; pokeAll(); });
+    ps.addEventListener('poke', pokeAll);
+    ps.addEventListener('error', function () { try { ps.close(); } catch (e) {} ps = null; setTimeout(pokeConnect, pd); pd = Math.min(pd * 1.7, 60000); });
+  }
+  window.__nbResume = function () { pokeAll(); if (!ps) { pd = 1000; pokeConnect(); } };
+  setTimeout(pokeConnect, 1200);
   window.fetch = function (i, init) {
     var req;
     try { req = new Request(i, init); } catch (e) { return of.apply(this, arguments); }

@@ -400,12 +400,12 @@ ${m.status === 'pending' ? `<div class="r" style="margin-top:8px"><input class="
   btn.onclick = () => { if (!key()) return alert('احفظ مفتاح الإدارة أولاً من قسم النظام والأمان'); ov.classList.add('on'); draw(); };
 
   // تحديث دوري كل 5 ثوانٍ
-  setInterval(async () => {
+  window.__adminTick = async () => {
     if (!key()) return;
     if (ov.classList.contains('on') && !document.hidden && tab !== 'campaigns') draw(true);
     try {
       const c = await api('/api/ctl/counts'), n = c.reports + (c.merchants || 0) + (c.agbuys || 0), b = btn.querySelector('i'); b.hidden = !n; b.textContent = n;
       [['reports', c.reports], ['merchants', c.merchants], ['agbuys', c.agbuys]].forEach(([t, v]) => { const x = ov.querySelector(`[data-bd="${t}"]`); if (x) { x.hidden = !v; x.textContent = v; } });
     } catch (e) {}
-  }, 5000);
+  }; setInterval(window.__adminTick, 5000);
 })();

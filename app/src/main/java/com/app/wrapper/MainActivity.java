@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Message;
 import android.util.Base64;
 import android.webkit.*;
@@ -236,8 +238,19 @@ public class MainActivity extends Activity {
         });
         web.setDownloadListener((url, ua, cd, mime, len) ->
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
+                @Override public void onAvailable(Network n) { pulse(); }
+            });
+        } catch (Exception e) { }
         web.loadUrl("https://" + HOST + "/" + BuildConfig.START);
     }
+
+    private void pulse() { if (web != null) web.post(() -> web.evaluateJavascript("window.__nbResume&&window.__nbResume()", null)); }
+
+    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); pulse(); }
+    @Override protected void onPause() { if (web != null) web.onPause(); super.onPause(); }
 
     @Override protected void onActivityResult(int req, int res, Intent data) {
         if (req == REQ_FILE && filePicker != null) {

@@ -17,3 +17,14 @@ if "Native.googleSignIn" not in s and key in s:
     s=s.replace(key,add+key,1)
 open(p,'w',encoding='utf-8').write(s)
 P
+python3 - <<'P'
+p='app/src/main/assets/admin-ext.js'
+s=open(p,encoding='utf-8').read()
+a="  // تحديث دوري كل 5 ثوانٍ\n  setInterval(async () => {"
+b="  }, 5000);\n})();"
+if a in s and b in s and "__adminTick" not in s:
+    s=s.replace(a,"  // تحديث دوري كل 5 ثوانٍ\n  window.__adminTick = async () => {",1)
+    i=s.rindex(b)
+    s=s[:i]+"  }; setInterval(window.__adminTick, 5000);\n})();"+s[i+len(b):]
+open(p,'w',encoding='utf-8').write(s)
+P
