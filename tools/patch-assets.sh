@@ -1,8 +1,8 @@
 #!/bin/sh
 # يُطبَّق بعد نسخ public/ الجديدة إلى app/src/main/assets (نسخ nb.js قبل الحذف وإعادته)
 A=app/src/main/assets
-sed -i 's/location\.origin/(window.__SERVER||location.origin)/g' $A/index.html $A/merchant-ext.js
-sed -i '0,/<head>/s//<head><script src="\/nb.js"><\/script>/' $A/index.html $A/admin.html
+grep -q '__SERVER||location.origin' $A/index.html || sed -i 's/location\.origin/(window.__SERVER||location.origin)/g' $A/index.html $A/merchant-ext.js
+for f in index.html admin.html; do grep -q 'src="/nb.js"' $A/$f || sed -i '0,/<head>/s//<head><script src="\/nb.js"><\/script>/' $A/$f; done
 python3 - <<'P'
 p='app/src/main/assets/google-ext.js'
 s=open(p,encoding='utf-8').read()

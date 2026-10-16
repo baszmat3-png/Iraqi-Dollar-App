@@ -20,6 +20,16 @@ jobs:
         with:
           path: release.keystore
           key: apk-signing-key-v1
+      - name: Use permanent signing key (secrets)
+        env:
+          KB64: ${{ secrets.KEYSTORE_B64 }}
+          KPASS: ${{ secrets.KEYSTORE_PASS }}
+        run: |
+          if [ -n "$KB64" ] && [ -n "$KPASS" ]; then
+            echo "$KB64" | base64 -d > release.keystore
+            echo "KS_PASS=$KPASS" >> "$GITHUB_ENV"
+            echo "PERMANENT_KEY=1" >> "$GITHUB_ENV"
+          fi
       - name: Create signing key if missing
         run: |
           [ -f release.keystore ] || keytool -genkeypair -keystore release.keystore -storepass apkstore123 -keypass apkstore123 -alias app -keyalg RSA -keysize 2048 -validity 36500 -dname "CN=App"
@@ -52,5 +62,5 @@ jobs:
           cp app/build/outputs/bundle/userRelease/*.aab app-release.aab
           gh release delete buildlog --yes --cleanup-tag || true
           gh release delete latest --yes --cleanup-tag || true
-          SHA1=$(keytool -list -v -keystore release.keystore -storepass apkstore123 | grep "SHA1:" | head -1 | sed 's/.*SHA1: *//')
-          gh release create latest app-release.apk admin-release.apk app-release.aab --title "Latest APK" --notes "Package: com.app.wrapper | SHA-1: $SHA1"
+          SHA1=$(keytool -list -v -keystore release.keystore -storepass "${KS_PASS:-apkstore123}" | grep "SHA1:" | head -1 | sed 's/.*SHA1: *//')
+          gh release create latest app-release.apk admin-release.apk app-release.aab --title "Latest APK" --notes "Package: com.app.wrapper | SHA-1: $SHA1 | permanent-key: ${PERMANENT_KEY:-no}"

@@ -28,7 +28,7 @@ android {
     signingConfigs {
         stable {
             def ks = System.getenv("KS_PATH")
-            if (ks) { storeFile file(ks); storePassword "apkstore123"; keyAlias "app"; keyPassword "apkstore123" }
+            if (ks) { storeFile file(ks); storePassword System.getenv("KS_PASS") ?: "apkstore123"; keyAlias "app"; keyPassword System.getenv("KS_PASS") ?: "apkstore123" }
         }
     }
     buildTypes {

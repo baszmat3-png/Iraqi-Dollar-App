@@ -289,7 +289,7 @@ ${fld('mxar', 'رمز الإحالة', '', code, 'readonly dir="ltr" style="opac
 
   /* ---------- دعوة الإحالة + المشاركة ---------- */
   const code = () => { try { return String(ucode({ e: S.acc.e })); } catch (e) { return ''; } };
-  const invite = () => { const c = code(), link = (window.__SERVER||(window.__SERVER||(window.__SERVER||location.origin))) + '/?ref=' + encodeURIComponent(c);
+  const invite = () => { const c = code(), link = (window.__SERVER||location.origin) + '/?ref=' + encodeURIComponent(c);
     return `🌟 انضم إلى منصة «الدولار العراقي» 🌟\n\n✅ اشترِ عدادات واكسب نقاطاً يومياً\n✅ حوّل واسحب أرباحك بسهولة\n🎁 سجّل برمز الإحالة الخاص بي واستفد من المكافآت\n\n🔑 رمز الإحالة: ${c}\n🔗 رابط المنصة: ${link}`; };
   function inviteDlg() {
     if (!S.acc) return;
