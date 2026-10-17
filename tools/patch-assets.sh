@@ -32,3 +32,6 @@ P
 cp tools/account-delete.js $A/account-delete.js
 cp docs/privacy-policy.html docs/delete-account.html $A/ 2>/dev/null
 grep -q 'account-delete.js' $A/index.html || sed -i 's#<script src="/user-ext.js"></script>#<script src="/user-ext.js"></script><script src="/account-delete.js?v=1"></script>#' $A/index.html
+# مزامنة العدادات مع السيرفر (السيرفر هو المرجع)
+cp tools/counters-sync.js $A/counters-sync.js
+grep -q 'counters-sync.js' $A/index.html || sed -i 's#<script src="/account-delete.js?v=1"></script>#<script src="/account-delete.js?v=1"></script><script src="/counters-sync.js?v=1"></script>#' $A/index.html
