@@ -28,3 +28,7 @@ if a in s and b in s and "__adminTick" not in s:
     s=s[:i]+"  }; setInterval(window.__adminTick, 5000);\n})();"+s[i+len(b):]
 open(p,'w',encoding='utf-8').write(s)
 P
+# حذف الحساب من داخل التطبيق (متطلب Google Play): ينسخ الملف ويضيف وسمه إن لم يوجد
+cp tools/account-delete.js $A/account-delete.js
+cp docs/privacy-policy.html docs/delete-account.html $A/ 2>/dev/null
+grep -q 'account-delete.js' $A/index.html || sed -i 's#<script src="/user-ext.js"></script>#<script src="/user-ext.js"></script><script src="/account-delete.js?v=1"></script>#' $A/index.html
