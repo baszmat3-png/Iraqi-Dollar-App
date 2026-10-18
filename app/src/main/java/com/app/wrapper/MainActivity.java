@@ -31,6 +31,20 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> filePicker;
     private final ExecutorService pool = Executors.newFixedThreadPool(6);
 
+    /** يسمح فقط بعنوان السيرفر نفسه (مع الشرطة المائلة لمنع نطاقات تبدأ بنفس النص) */
+    static boolean allowed(String url) {
+        if (url == null) return false;
+        String base = BuildConfig.APP_URL.replaceAll("/+$", "");
+        return url.equals(base) || url.startsWith(base + "/");
+    }
+    /** فتح الروابط الخارجية: http/https فقط */
+    private void openExternal(Uri u) {
+        try {
+            String sc = u == null ? null : u.getScheme();
+            if ("https".equalsIgnoreCase(sc) || "http".equalsIgnoreCase(sc)) startActivity(new Intent(Intent.ACTION_VIEW, u));
+        } catch (Exception e) { }
+    }
+
     class Bridge {
         @JavascriptInterface public String server() { return BuildConfig.APP_URL; }
 
@@ -61,7 +75,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void sseStart(String id, String url) {
             new Thread(() -> {
                 try {
-                    if (!url.startsWith(BuildConfig.APP_URL)) throw new IOException("blocked");
+                    if (!allowed(url)) throw new IOException("blocked");
                     HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
                     c.setConnectTimeout(20000); c.setReadTimeout(0);
                     c.setRequestProperty("Accept", "text/event-stream");
@@ -91,7 +105,7 @@ public class MainActivity extends Activity {
             pool.execute(() -> {
                 int status = -1; String hb = "", bb = "";
                 try {
-                    if (!url.startsWith(BuildConfig.APP_URL)) throw new IOException("blocked");
+                    if (!allowed(url)) throw new IOException("blocked");
                     HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
                     c.setConnectTimeout(20000); c.setReadTimeout(60000);
                     c.setRequestMethod(method);
@@ -189,6 +203,13 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setAllowFileAccess(false);
+        s.setAllowContentAccess(false);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        s.setGeolocationEnabled(false);
+        s.setSafeBrowsingEnabled(true);
+        WebView.setWebContentsDebuggingEnabled(false);
         s.setSupportMultipleWindows(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         web.addJavascriptInterface(new Bridge(), "Native");
@@ -211,7 +232,7 @@ public class MainActivity extends Activity {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 Uri u = r.getUrl();
                 if (HOST.equals(u.getHost())) return false;
-                try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) {}
+                openExternal(u);
                 return true;
             }
         });
@@ -227,7 +248,7 @@ public class MainActivity extends Activity {
                 WebView tmp = new WebView(MainActivity.this);
                 tmp.setWebViewClient(new WebViewClient() {
                     @Override public boolean shouldOverrideUrlLoading(WebView w, WebResourceRequest r) {
-                        try { startActivity(new Intent(Intent.ACTION_VIEW, r.getUrl())); } catch (Exception e) {}
+                        openExternal(r.getUrl());
                         return true;
                     }
                 });
@@ -237,7 +258,7 @@ public class MainActivity extends Activity {
             }
         });
         web.setDownloadListener((url, ua, cd, mime, len) ->
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+            openExternal(Uri.parse(url)));
         try {
             ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
