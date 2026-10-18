@@ -10,6 +10,9 @@ import android.os.Message;
 import android.util.Base64;
 import android.webkit.*;
 import androidx.webkit.WebViewAssetLoader;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.webkit.PermissionRequest;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -27,6 +30,8 @@ import org.json.JSONObject;
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final int REQ_FILE = 1;
+    private static final int REQ_MIC = 2;
+    private PermissionRequest pendingMic;
     private WebView web;
     private ValueCallback<Uri[]> filePicker;
     private final ExecutorService pool = Executors.newFixedThreadPool(6);
@@ -188,6 +193,15 @@ public class MainActivity extends Activity {
         web.post(() -> web.evaluateJavascript(js, null));
     }
 
+    @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
+        super.onRequestPermissionsResult(code, perms, res);
+        if (code == REQ_MIC && pendingMic != null) {
+            if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pendingMic.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            else pendingMic.deny();
+            pendingMic = null;
+        }
+    }
+
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         web = new WebView(this);
@@ -243,6 +257,21 @@ public class MainActivity extends Activity {
                 try { startActivityForResult(p.createIntent(), REQ_FILE); }
                 catch (Exception e) { filePicker = null; return false; }
                 return true;
+            }
+            /** الميكروفون للرومات الصوتية: يُمنح لصفحات التطبيق نفسه فقط وبعد موافقة المستخدم */
+            @Override public void onPermissionRequest(final PermissionRequest r) {
+                runOnUiThread(() -> {
+                    boolean audio = false;
+                    for (String x : r.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x)) audio = true;
+                    if (!audio || r.getOrigin() == null || !HOST.equals(r.getOrigin().getHost())) { r.deny(); return; }
+                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        r.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                    } else {
+                        if (pendingMic != null) pendingMic.deny();
+                        pendingMic = r;
+                        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
+                    }
+                });
             }
             @Override public boolean onCreateWindow(WebView v, boolean d, boolean g, Message m) {
                 WebView tmp = new WebView(MainActivity.this);
