@@ -7,7 +7,7 @@
   function target(u) {
     try {
       var a = new URL(u, location.href);
-      if (a.origin === location.origin && (a.pathname.indexOf('/api/') === 0 || a.pathname === '/config.json')) return S + a.pathname + a.search;
+      if ((a.origin === location.origin || a.origin === new URL(S).origin) && (a.pathname.indexOf('/api/') === 0 || a.pathname === '/config.json')) return S + a.pathname + a.search;
     } catch (e) {}
     return null;
   }
