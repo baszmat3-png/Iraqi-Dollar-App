@@ -36,6 +36,15 @@
     document.querySelectorAll('[data-a="gsign"]').forEach((b) => { b.disabled = !!on; b.style.opacity = on ? '.6' : ''; });
   }
 
+  function webFallback() {
+    try {
+      const a = new Uint8Array(16); crypto.getRandomValues(a);
+      const st = Array.from(a, (x) => ('0' + x.toString(16)).slice(-2)).join('');
+      say('سيُفتح المتصفح لإكمال الدخول عبر Google');
+      Native.googleWeb(String(Native.server()).replace(/\/+$/, '') + '/g-app.html?s=' + st, st);
+    } catch (e) { fail('تعذر الدخول عبر Google'); }
+  }
+
   window.googleSignIn = function () {
     if (busy) return;
     if (typeof CFG !== 'undefined' && CFG.maint) return fail('التطبيق قيد الصيانة حالياً، حاول لاحقاً');
@@ -47,7 +56,10 @@
         if (t) return finish('idt:' + t);
         setBusy(false);
         // إلغاء المستخدم الفعلي صامت؛ أي «إلغاء» آخر (خطأ بصمة/معرّف) يُعرض بسببه
-        if (err && !/^cancel:?\s*(activity is cancelled by the user\.?)?\s*$/i.test(err)) fail('تعذر الدخول عبر Google: ' + err);
+        if (err && !/^cancel:?\s*(activity is cancelled by the user\.?)?\s*$/i.test(err)) {
+          if (Native.googleWeb) return webFallback(); // فشل الدخول الأصلي (بصمة/معرّف): نكمل عبر المتصفح
+          fail('تعذر الدخول عبر Google: ' + err);
+        }
       };
       setTimeout(() => { if (busy) setBusy(false); }, 120000);
       return Native.googleSignIn(cfg.clientId);

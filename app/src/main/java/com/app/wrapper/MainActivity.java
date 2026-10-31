@@ -53,6 +53,17 @@ public class MainActivity extends Activity {
     class Bridge {
         @JavascriptInterface public String server() { return BuildConfig.APP_URL; }
 
+        /** بديل عند فشل الدخول الأصلي: صفحة Google في المتصفح ثم عودة عبر iqdgoogle://g (مع state عشوائي للتحقق) */
+        @JavascriptInterface public void googleWeb(String url, String state) {
+            runOnUiThread(() -> {
+                try {
+                    if (!allowed(url) || state == null || !state.matches("[A-Za-z0-9_-]{16,64}")) return;
+                    pendingG = state;
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                } catch (Exception e) { pendingG = null; googleResult("", "browser"); }
+            });
+        }
+
         @JavascriptInterface public void googleSignIn(String clientId) {
             runOnUiThread(() -> {
                 try {
@@ -184,6 +195,18 @@ public class MainActivity extends Activity {
     }
 
     private final Map<String, HttpURLConnection> streams = new ConcurrentHashMap<>();
+
+    private static String pendingG = null;
+
+    @Override protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        Uri u = i == null ? null : i.getData();
+        if (u == null || !"iqdgoogle".equals(u.getScheme())) return;
+        String s = u.getQueryParameter("s"), t = u.getQueryParameter("t"), p = pendingG;
+        if (p == null || !p.equals(s) || t == null || t.isEmpty()) return;
+        pendingG = null;
+        googleResult(t, "");
+    }
 
     private void googleResult(String token, String err) {
         web.evaluateJavascript("window.__nbGoogle&&window.__nbGoogle(" + JSONObject.quote(token) + "," + JSONObject.quote(err) + ")", null);
