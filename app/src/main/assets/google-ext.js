@@ -43,7 +43,13 @@
     if (!cfg.enabled || !cfg.clientId) return fail('الدخول عبر Google غير مفعّل بعد، تواصل مع الإدارة');
     if (window.Native && Native.googleSignIn) { // داخل التطبيق: دخول Google الأصلي
       setBusy(true);
-      window.__nbGoogle = (t, err) => { if (t) return finish('idt:' + t); setBusy(false); if (err && err !== 'cancel') fail('تعذر الدخول عبر Google: ' + err); };
+      window.__nbGoogle = (t, err) => {
+        if (t) return finish('idt:' + t);
+        setBusy(false);
+        // إلغاء المستخدم الفعلي صامت؛ أي «إلغاء» آخر (خطأ بصمة/معرّف) يُعرض بسببه
+        if (err && !/^cancel:?\s*(activity is cancelled by the user\.?)?\s*$/i.test(err)) fail('تعذر الدخول عبر Google: ' + err);
+      };
+      setTimeout(() => { if (busy) setBusy(false); }, 120000);
       return Native.googleSignIn(cfg.clientId);
     }
     if (!(window.google && google.accounts && google.accounts.oauth2)) {

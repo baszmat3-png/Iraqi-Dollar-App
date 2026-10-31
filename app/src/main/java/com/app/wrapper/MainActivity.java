@@ -69,11 +69,12 @@ public class MainActivity extends Activity {
                                 } else googleResult("", "unsupported");
                             }
                             @Override public void onError(GetCredentialException e) {
-                                googleResult("", e instanceof GetCredentialCancellationException ? "cancel"
-                                    : (e.getType() + " " + (e.getMessage() == null ? "" : e.getMessage())));
+                                android.util.Log.e("GoogleSignIn", "type=" + e.getType() + " msg=" + e.getMessage(), e);
+                                String m = e.getMessage() == null ? "" : e.getMessage();
+                                googleResult("", (e instanceof GetCredentialCancellationException ? "cancel: " : (e.getType() + " ")) + m);
                             }
                         });
-                } catch (Exception e) { googleResult("", String.valueOf(e.getMessage())); }
+                } catch (Exception e) { android.util.Log.e("GoogleSignIn", "launch", e); googleResult("", String.valueOf(e.getMessage())); }
             });
         }
 
